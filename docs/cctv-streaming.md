@@ -87,8 +87,8 @@
   - **Media**: optional `image_jpeg_base64` or signed URL when the event should deliver a snapshot.
 
 ## 7. CI/CD and Collaboration
-- [ ] **Free-tier** Set up GitHub Actions (or GitLab CI) to lint or test the Python codebase, build Docker images, and push to ECR.
-- [ ] **Free-tier** Automate EC2 deployment via SSM Session Manager, CodeDeploy, or a simple SSH-based script triggered on main branch merges.
+- [x] **Free-tier** GitHub Actions workflows (`ci.yml`, `deploy.yml`) lint/test the repo and trigger deployment on `main`.
+- [x] **Free-tier** Automated EC2 deploy over SSH (requires GitHub secrets `EC2_HOST`, `EC2_USER`, `EC2_SSH_KEY` and an EC2-side deploy key for repo access).
 - [ ] **Free-tier** Keep environment variables and secrets (`MEDIA_RPI_RTSP_URL`, `FASTAPI_ENDPOINT`, `YOLO_MODEL_PATH`, and so on) in SSM Parameter Store or Secrets Manager.
 - [ ] **Free-tier** Publish dependency manifest (`requirements.txt`) and ensure CI installs via `pip install -r requirements.txt`.
 - [ ] **GPU cutover** Extend pipelines to build GPU-enabled images, run smoke tests with CUDA, and promote artifacts per environment.

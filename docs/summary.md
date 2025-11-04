@@ -32,3 +32,4 @@
 - `ml_inference/.env`: local development defaults; copy and edit for each environment.
 - `requirements.txt`: Python dependencies for the skeleton (`pip install -r requirements.txt`).
 - `docs/README.md`: index pointing to the active documentation set.
+- GitHub Actions: `ci.yml` (lint/test) and `deploy.yml` (SSH deploy to EC2; requires secrets `EC2_HOST`, `EC2_USER`, `EC2_SSH_KEY` and an EC2-side deploy key with repo read access).
