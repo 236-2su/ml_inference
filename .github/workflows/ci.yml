@@ -28,4 +28,5 @@ jobs:
         run: pytest
 
       - name: FastAPI smoke (import check)
-        run: python -c "import ml_inference.fastapi_app.main as app; print(app.app.title)"
+        run: |
+          PYTHONPATH=. python -c "import fastapi_app.main as app; print(app.app.title)"
