@@ -27,15 +27,11 @@ jobs:
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
-        env:
-          REPO_URL: git@github.com:${{ github.repository }}.git
-          APP_DIR: /srv/ml_inference
-          BRANCH: main
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: REPO_URL,APP_DIR,BRANCH
+          envs: APP_DIR,BRANCH
           script: |
             set -euo pipefail
             export DEBIAN_FRONTEND=noninteractive
@@ -50,11 +46,14 @@ jobs:
             if [ ! -d "$APP_DIR" ]; then
               sudo mkdir -p "$APP_DIR"
               sudo chown "$USER":"$USER" "$APP_DIR"
-              git clone "$REPO_URL" "$APP_DIR"
             fi
             cd "$APP_DIR"
+            if [ ! -d ".git" ]; then
+              git init
+              git remote add origin https://github.com/${{ github.repository }}.git
+            fi
             git fetch origin "$BRANCH"
-            git checkout "$BRANCH"
+            git checkout "$BRANCH" || git checkout -b "$BRANCH"
             git reset --hard "origin/$BRANCH"
             python3 -m venv venv || true
             source venv/bin/activate
