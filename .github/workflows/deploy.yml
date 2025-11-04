@@ -63,3 +63,4 @@ jobs:
             pip install --upgrade pip
             pip install -r requirements.txt
             pytest
+            sudo systemctl restart ml-inference || sudo systemctl start ml-inference

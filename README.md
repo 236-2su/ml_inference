@@ -1,2 +1,1 @@
-# ml_inference
-영상 추론 
+ci/cd test
