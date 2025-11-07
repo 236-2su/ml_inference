@@ -14,6 +14,8 @@ from .tracker import Track
 
 @dataclass
 class EventContext:
+    """Metadata kept for logging but not serialized."""
+
     stream_id: str
     gpu_enabled: bool
 
@@ -28,39 +30,51 @@ class EventBuilder:
         track: Track,
         frame_timestamp: datetime,
         pose: PoseResult,
+        inference_latency_ms: int,
+        status: Optional[str] = None,
+        duration_seconds: Optional[int] = None,
+        snapshot_b64: Optional[str] = None,
     ) -> Dict[str, object]:
         detection = track.detection
-        return {
+        event: Dict[str, object] = {
             "event_id": str(uuid.uuid4()),
             "category": "human",
-            "stream_id": ctx.stream_id,
             "track_id": track.track_id,
             "timestamp_utc": frame_timestamp.isoformat(),
             "bbox": detection.bbox,
             "confidence": detection.confidence,
+            "inference_latency_ms": inference_latency_ms,
             "pose_label": pose.label,
             "pose_confidence": pose.confidence,
-            "keypoints": pose.keypoints,
-            "gpu_enabled": ctx.gpu_enabled,
         }
+        if status:
+            event["status"] = status
+        if duration_seconds is not None:
+            event["duration_seconds"] = duration_seconds
+        if snapshot_b64:
+            event["image_jpeg_base64"] = snapshot_b64
+        return event
 
     def build_wildlife_event(
         self,
         ctx: EventContext,
         track: Track,
         frame_timestamp: datetime,
+        inference_latency_ms: int,
+        snapshot_b64: Optional[str] = None,
     ) -> Dict[str, object]:
         detection = track.detection
-        threat_level = "warning" if detection.label in {"boar"} else "info"
-        return {
+        event: Dict[str, object] = {
             "event_id": str(uuid.uuid4()),
             "category": "wildlife",
             "species": detection.label,
             "species_confidence": detection.confidence,
-            "threat_level": threat_level,
-            "stream_id": ctx.stream_id,
             "track_id": track.track_id,
             "timestamp_utc": frame_timestamp.isoformat(),
             "bbox": detection.bbox,
-            "gpu_enabled": ctx.gpu_enabled,
+            "confidence": detection.confidence,
+            "inference_latency_ms": inference_latency_ms,
         }
+        if snapshot_b64:
+            event["image_jpeg_base64"] = snapshot_b64
+        return event
