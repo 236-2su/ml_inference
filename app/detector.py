@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import List, Optional
 
 import numpy as np
@@ -24,6 +25,7 @@ except ImportError as exc:  # pragma: no cover - runtime dependency
         "Install it via `pip install ultralytics`."
     ) from exc
 
+from .config import get_settings
 from .stream_listener import Frame
 
 log = logging.getLogger(__name__)
@@ -102,3 +104,38 @@ class Detector:
 
         log.warning("Unsupported frame image type %s", type(frame.image))
         return None
+
+def _parse_args() -> 'argparse.Namespace':
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Detector verification helper")
+    parser.add_argument("--image", help="Optional image path for a quick inference dry-run")
+    return parser.parse_args()
+
+
+def _cli() -> None:
+    args = _parse_args()
+    settings = get_settings()
+    detector = Detector(
+        model_path=settings.yolo_model_path,
+        conf_threshold=settings.yolo_conf_threshold,
+        iou_threshold=settings.yolo_iou_threshold,
+    )
+    print(f"Loaded model: {detector.model_path}")
+    print(f"Class count: {len(detector.label_map)}")
+    print(f"Confidence threshold: {detector.conf_threshold}")
+    print(f"IoU threshold: {detector.iou_threshold}")
+    if args.image:
+        image = cv2.imread(args.image)
+        if image is None:
+            raise FileNotFoundError(f"Failed to read image: {args.image}")
+        frame = Frame(index=0, timestamp=datetime.now(tz=timezone.utc), image=image)
+        detections = detector.detect(frame)
+        print(f"Detections: {len(detections)}")
+        for det in detections:
+            print(f" - {det.label} ({det.confidence:.2f}) bbox={det.bbox}")
+
+
+if __name__ == "__main__":  # pragma: no cover - manual utility
+    _cli()
+

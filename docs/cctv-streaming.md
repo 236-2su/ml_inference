@@ -143,3 +143,23 @@
 | 10 to 11 | End-to-end test with Raspberry Pi -> FastAPI, validate alert scenarios, backlog cleanup. |
 
 > Next steps after MVP: automate `.pt` weight syncing from the training pipeline, design long-term storage for events (database or data lake), and introduce MLOps tooling (MLflow, Airflow) once the workflow stabilizes.
+
+
+## Appendix: Local RTSP Publishing for Tests
+
+When the Raspberry Pi feed is offline, push any local media into the mediaMTX `cctv` path and point the inference stack at `rtsp://k13e106.p.ssafy.io:8554/cctv`.
+
+### Windows
+```powershell
+cd ml_inference
+powershell -File scripts/publish_rtsp.ps1 -InputPath wildboar.jpg
+```
+
+### macOS/Linux
+```bash
+cd ml_inference
+bash scripts/publish_rtsp.sh wildboar.jpg rtsp://heobyPublisher:S3curePub!230@k13e106.p.ssafy.io:8554/cctv
+```
+
+The scripts loop the source media, encode H.264, and use TCP transport so mediaMTX can expose the stream to other clients.
+

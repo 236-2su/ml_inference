@@ -22,3 +22,4 @@ htmlcov/
 
 # Logs
 *.log
+.venv_rtmpose/

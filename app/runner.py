@@ -5,13 +5,22 @@ from __future__ import annotations
 import base64
 import logging
 import time
-from typing import Iterable, List, Optional
+from typing import List, Optional
+
+import numpy as np
+
+try:
+    import cv2
+except ImportError as exc:  # pragma: no cover - runtime dependency
+    raise ImportError(
+        "opencv-python-headless is required for snapshot support. "
+        "Install it via `pip install opencv-python-headless`."
+    ) from exc
 
 from .config import Settings, get_settings
 from .detector import Detector
 from .dispatcher import EventDispatcher
 from .event_builder import EventBuilder, EventContext
-from .pose_estimator import PoseEstimator
 from .stream_listener import Frame, StreamListener
 from .tracker import Tracker
 
@@ -25,7 +34,6 @@ class InferencePipeline:
         listener: StreamListener,
         detector: Detector,
         tracker: Tracker,
-        pose_estimator: PoseEstimator,
         event_builder: EventBuilder,
         dispatcher: EventDispatcher,
     ) -> None:
@@ -33,7 +41,6 @@ class InferencePipeline:
         self.listener = listener
         self.detector = detector
         self.tracker = tracker
-        self.pose_estimator = pose_estimator
         self.event_builder = event_builder
         self.dispatcher = dispatcher
 
@@ -49,30 +56,16 @@ class InferencePipeline:
         )
         events: List[dict] = []
         for track in tracks:
-            detection = track.detection
             latency_ms = int((time.perf_counter() - processing_started) * 1000)
-            if detection.label == "human":
-                pose = self.pose_estimator.infer(frame, detection)
-                events.append(
-                    self.event_builder.build_human_event(
-                        ctx=ctx,
-                        track=track,
-                        frame_timestamp=frame.timestamp,
-                        pose=pose,
-                        inference_latency_ms=latency_ms,
-                        snapshot_b64=snapshot_b64,
-                    )
+            events.append(
+                self.event_builder.build_wildlife_event(
+                    ctx=ctx,
+                    track=track,
+                    frame_timestamp=frame.timestamp,
+                    inference_latency_ms=latency_ms,
+                    snapshot_b64=snapshot_b64,
                 )
-            else:
-                events.append(
-                    self.event_builder.build_wildlife_event(
-                        ctx=ctx,
-                        track=track,
-                        frame_timestamp=frame.timestamp,
-                        inference_latency_ms=latency_ms,
-                        snapshot_b64=snapshot_b64,
-                    )
-                )
+            )
         return events
 
     def run_once(self, limit: int = 10) -> None:
@@ -88,10 +81,16 @@ class InferencePipeline:
                 self.dispatcher.send_batch(events)
 
     def _maybe_encode_snapshot(self, frame: Frame) -> Optional[str]:
-        if not self.settings.include_snapshot:
+        if not self.settings.include_snapshot or frame.image is None:
             return None
         if isinstance(frame.image, bytes):
             return base64.b64encode(frame.image).decode("ascii")
+        if isinstance(frame.image, np.ndarray):
+            success, buffer = cv2.imencode(".jpg", frame.image)
+            if not success:
+                log.warning("Snapshot encoding failed for frame %s", frame.index)
+                return None
+            return base64.b64encode(buffer.tobytes()).decode("ascii")
         log.debug("Snapshot capture skipped for frame %s (unsupported type)", frame.index)
         return None
 
@@ -105,15 +104,13 @@ def create_pipeline(settings: Settings | None = None) -> InferencePipeline:
         iou_threshold=settings.yolo_iou_threshold,
     )
     tracker = Tracker()
-    pose_estimator = PoseEstimator()
-    event_builder = EventBuilder(pose_estimator=pose_estimator)
+    event_builder = EventBuilder()
     dispatcher = EventDispatcher(settings)
     return InferencePipeline(
         settings=settings,
         listener=listener,
         detector=detector,
         tracker=tracker,
-        pose_estimator=pose_estimator,
         event_builder=event_builder,
         dispatcher=dispatcher,
     )
