@@ -72,8 +72,8 @@ class Settings(BaseSettings):
         description="When a human detection exceeds this confidence, wildlife inference is skipped for that frame.",
     )
     yolo_pose_model_path: str = Field(
-        "models/rtmpose-l.pt",
-        description="RTMpose weights used for human posture estimation.",
+        "yolov8x-pose.pt",
+        description="Ultralytics pose model used for human posture estimation.",
     )
     yolo_pose_conf_threshold: float = Field(
         0.35,
@@ -82,7 +82,7 @@ class Settings(BaseSettings):
         description="Confidence threshold applied to pose predictions.",
     )
     pose_keypoint_conf_threshold: float = Field(
-        0.3,
+        0.002,
         ge=0.0,
         le=1.0,
         description="Minimum keypoint confidence retained when classifying pose.",

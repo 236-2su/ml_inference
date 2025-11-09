@@ -87,7 +87,7 @@ def classify_pose_from_keypoints(
     lying_conf = float(np.mean(lying_scores)) if lying_scores else 0.0
     standing_conf = float(np.mean(standing_scores)) if standing_scores else 0.0
     top_conf = max(lying_conf, standing_conf)
-    if top_conf < 0.15:
+    if top_conf < 0.01:
         return "unknown", 0.0
 
     if lying_conf > standing_conf:

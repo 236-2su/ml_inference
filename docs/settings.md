@@ -48,9 +48,9 @@
 | `YOLO_HUMAN_CONF_THRESHOLD` | Confidence for human detector | `0.35` |
 | `YOLO_HUMAN_IOU_THRESHOLD` | IoU for human detector | `0.45` |
 | `HUMAN_SKIP_CONF_THRESHOLD` | Confidence above which wildlife model is skipped | `0.7` |
-| `YOLO_POSE_MODEL_PATH` | RTMpose weights for human pose | `models/rtmpose-l.pt` |
+| `YOLO_POSE_MODEL_PATH` | Pose model weights path | `yolov8x-pose.pt` |
 | `YOLO_POSE_CONF_THRESHOLD` | Confidence for pose keypoints | `0.35` |
-| `POSE_KEYPOINT_CONF_THRESHOLD` | Minimum keypoint score kept for pose heuristics | `0.3` |
+| `POSE_KEYPOINT_CONF_THRESHOLD` | Minimum keypoint score kept for pose heuristics | `0.002` |
 | `POSE_LYING_ASPECT_RATIO` | Height/width ratio below which a person is considered lying | `0.65` |
 | `POSE_LYING_TORSO_ANGLE_DEG` | Torso angle (deg) below which a person is considered lying | `35` |
 | `FASTAPI_ENDPOINT` | REST target for events | `http://localhost:8000/events` |
