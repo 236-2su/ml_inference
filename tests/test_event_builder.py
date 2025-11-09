@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
 
-from ml_inference.app.detector import Detection
-from ml_inference.app.event_builder import EventBuilder, EventContext
-from ml_inference.app.pose_estimator import PoseEstimator, PoseResult
-from ml_inference.app.tracker import Track
+from app.detector import Detection
+from app.event_builder import EventBuilder, EventContext
+from app.pose_estimator import PoseEstimator, PoseResult
+from app.tracker import Track
 
 
 def test_build_human_event():

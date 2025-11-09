@@ -150,6 +150,9 @@ def create_pipeline(settings: Settings | None = None) -> InferencePipeline:
     pose_estimator = PoseEstimator(
         model_path=settings.yolo_pose_model_path,
         conf_threshold=settings.yolo_pose_conf_threshold,
+        keypoint_conf_threshold=settings.pose_keypoint_conf_threshold,
+        lying_aspect_ratio=settings.pose_lying_aspect_ratio,
+        lying_torso_angle_deg=settings.pose_lying_torso_angle_deg,
     )
     event_builder = EventBuilder(pose_estimator=pose_estimator)
     dispatcher = EventDispatcher(settings)

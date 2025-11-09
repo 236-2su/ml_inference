@@ -72,14 +72,31 @@ class Settings(BaseSettings):
         description="When a human detection exceeds this confidence, wildlife inference is skipped for that frame.",
     )
     yolo_pose_model_path: str = Field(
-        "yolov8x-pose.pt",
-        description="Ultralytics pose model used for human posture estimation.",
+        "models/rtmpose-l.pt",
+        description="RTMpose weights used for human posture estimation.",
     )
     yolo_pose_conf_threshold: float = Field(
-        0.25,
+        0.35,
         ge=0.0,
         le=1.0,
-        description="Confidence threshold applied to YOLO pose predictions.",
+        description="Confidence threshold applied to pose predictions.",
+    )
+    pose_keypoint_conf_threshold: float = Field(
+        0.3,
+        ge=0.0,
+        le=1.0,
+        description="Minimum keypoint confidence retained when classifying pose.",
+    )
+    pose_lying_aspect_ratio: float = Field(
+        0.65,
+        ge=0.1,
+        description="If height/width ratio is below this threshold, treat person as lying.",
+    )
+    pose_lying_torso_angle_deg: float = Field(
+        35.0,
+        ge=0.0,
+        le=90.0,
+        description="If torso angle (deg) is below this threshold, treat person as lying.",
     )
     media_output_root: str = Field(
         "./artifacts",

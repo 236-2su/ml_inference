@@ -30,3 +30,4 @@ htmlcov/
 
 # Large model weights (keep local only)
 models/yolov8x.pt
+models/rtmpose-*.pt
