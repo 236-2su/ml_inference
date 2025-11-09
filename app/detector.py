@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Set
 
 import numpy as np
 
@@ -18,11 +18,8 @@ except ImportError as exc:  # pragma: no cover - runtime dependency
 
 try:
     from ultralytics import YOLO  # type: ignore
-except ImportError as exc:  # pragma: no cover - runtime dependency
-    raise ImportError(
-        "ultralytics package is required for the detector. "
-        "Install it via `pip install ultralytics`."
-    ) from exc
+except ImportError:  # pragma: no cover - optional at test time
+    YOLO = None  # type: ignore
 
 from .stream_listener import Frame
 
@@ -42,10 +39,17 @@ class Detector:
         model_path: str,
         conf_threshold: float,
         iou_threshold: float,
+        allowed_labels: Optional[Set[str]] = None,
     ) -> None:
         self.model_path = model_path
         self.conf_threshold = conf_threshold
         self.iou_threshold = iou_threshold
+        self.allowed_labels = {label.lower() for label in allowed_labels} if allowed_labels else None
+        if YOLO is None:  # pragma: no cover - exercised in unit tests
+            raise ImportError(
+                "ultralytics package is required for the detector. "
+                "Install it via `pip install ultralytics`."
+            )
         self.model = YOLO(model_path)
         self.label_map = {int(k): v for k, v in self.model.names.items()}
         log.info(
@@ -78,6 +82,8 @@ class Detector:
         for box in boxes:
             cls_idx = int(box.cls.item())
             label = self.label_map.get(cls_idx, str(cls_idx))
+            if self.allowed_labels and label.lower() not in self.allowed_labels:
+                continue
             conf = float(box.conf.item())
             xywh = box.xywh[0].tolist()
             x, y, w, h = (int(value) for value in xywh)

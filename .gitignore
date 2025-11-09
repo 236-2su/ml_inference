@@ -22,3 +22,11 @@ htmlcov/
 
 # Logs
 *.log
+
+# Local experiment venv
+.venv_rtmpose/
+
+.venv_rtmpose
+
+# Large model weights (keep local only)
+models/yolov8x.pt

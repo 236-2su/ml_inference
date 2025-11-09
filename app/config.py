@@ -49,6 +49,38 @@ class Settings(BaseSettings):
         le=1.0,
         description="IoU threshold used during NMS.",
     )
+    yolo_human_model_path: Optional[str] = Field(
+        None,
+        description="Secondary YOLO weights dedicated to human detection.",
+    )
+    yolo_human_conf_threshold: float = Field(
+        0.35,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence for the human-only model.",
+    )
+    yolo_human_iou_threshold: float = Field(
+        0.45,
+        ge=0.0,
+        le=1.0,
+        description="IoU used by the human-only model.",
+    )
+    human_skip_conf_threshold: float = Field(
+        0.7,
+        ge=0.0,
+        le=1.0,
+        description="When a human detection exceeds this confidence, wildlife inference is skipped for that frame.",
+    )
+    yolo_pose_model_path: str = Field(
+        "yolov8x-pose.pt",
+        description="Ultralytics pose model used for human posture estimation.",
+    )
+    yolo_pose_conf_threshold: float = Field(
+        0.25,
+        ge=0.0,
+        le=1.0,
+        description="Confidence threshold applied to YOLO pose predictions.",
+    )
     media_output_root: str = Field(
         "./artifacts",
         description="Base directory used for temporary snapshots or clips.",
@@ -67,7 +99,8 @@ class Settings(BaseSettings):
     )
 
 
-@lru_cache
+# NOTE: functools.lru_cache requires an explicit call on Python 3.7.
+@lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """Return a cached settings instance."""
     return Settings()

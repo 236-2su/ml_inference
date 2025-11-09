@@ -43,7 +43,11 @@
 | Key | Purpose | Current value / location |
 | --- | --- | --- |
 | `MEDIA_RPI_RTSP_URL` | mediaMTX pull source | `rtsp://example.local:8554/stream` (see `.env`) |
-| `YOLO_MODEL_PATH` | Path to deployed weights | `models/yolov8n-custom.pt` |
+| `YOLO_MODEL_PATH` | Path to deployed weights | `models/best.pt` |
+| `YOLO_HUMAN_MODEL_PATH` | Path to human-only weights | `models/yolov8x.pt` |
+| `YOLO_HUMAN_CONF_THRESHOLD` | Confidence for human detector | `0.35` |
+| `YOLO_HUMAN_IOU_THRESHOLD` | IoU for human detector | `0.45` |
+| `HUMAN_SKIP_CONF_THRESHOLD` | Confidence above which wildlife model is skipped | `0.7` |
 | `FASTAPI_ENDPOINT` | REST target for events | `http://localhost:8000/events` |
 | `FASTAPI_TOKEN` | Auth secret (stored in SSM/Secrets Manager) | `local-dev-token` (replace in production) |
 | `MEDIA_OUTPUT_ROOT` | Local or S3 storage base path | `./artifacts` |

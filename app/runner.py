@@ -7,8 +7,18 @@ import logging
 import time
 from typing import Iterable, List, Optional
 
+import numpy as np
+
+try:  # pragma: no cover - runtime dependency
+    import cv2
+except ImportError as exc:  # pragma: no cover
+    raise ImportError(
+        "opencv-python-headless is required for snapshot encoding. "
+        "Install it via `pip install opencv-python-headless`."
+    ) from exc
+
 from .config import Settings, get_settings
-from .detector import Detector
+from .detector import Detection, Detector
 from .dispatcher import EventDispatcher
 from .event_builder import EventBuilder, EventContext
 from .pose_estimator import PoseEstimator
@@ -23,7 +33,8 @@ class InferencePipeline:
         self,
         settings: Settings,
         listener: StreamListener,
-        detector: Detector,
+        wildlife_detector: Detector,
+        human_detector: Optional[Detector],
         tracker: Tracker,
         pose_estimator: PoseEstimator,
         event_builder: EventBuilder,
@@ -31,7 +42,8 @@ class InferencePipeline:
     ) -> None:
         self.settings = settings
         self.listener = listener
-        self.detector = detector
+        self.wildlife_detector = wildlife_detector
+        self.human_detector = human_detector
         self.tracker = tracker
         self.pose_estimator = pose_estimator
         self.event_builder = event_builder
@@ -41,7 +53,23 @@ class InferencePipeline:
         processing_started = time.perf_counter()
         snapshot_b64 = self._maybe_encode_snapshot(frame)
 
-        detections = self.detector.detect(frame)
+        detections: List[Detection] = []
+        skip_wildlife = False
+        if self.human_detector:
+            human_detections = self.human_detector.detect(frame)
+            if any(
+                detection.confidence >= self.settings.human_skip_conf_threshold
+                for detection in human_detections
+            ):
+                skip_wildlife = True
+            for detection in human_detections:
+                detection.label = "human"
+            detections.extend(human_detections)
+
+        if not skip_wildlife:
+            wildlife_detections = self.wildlife_detector.detect(frame)
+            detections.extend(wildlife_detections)
+
         tracks = self.tracker.update(frame, detections)
         ctx = EventContext(
             stream_id=self.settings.media_rpi_rtsp_url,
@@ -92,6 +120,12 @@ class InferencePipeline:
             return None
         if isinstance(frame.image, bytes):
             return base64.b64encode(frame.image).decode("ascii")
+        if isinstance(frame.image, np.ndarray):
+            success, buffer = cv2.imencode(".jpg", frame.image)
+            if not success:
+                log.warning("Failed to encode snapshot for frame %s", frame.index)
+                return None
+            return base64.b64encode(buffer.tobytes()).decode("ascii")
         log.debug("Snapshot capture skipped for frame %s (unsupported type)", frame.index)
         return None
 
@@ -99,19 +133,31 @@ class InferencePipeline:
 def create_pipeline(settings: Settings | None = None) -> InferencePipeline:
     settings = settings or get_settings()
     listener = StreamListener(settings.media_rpi_rtsp_url, fps_limit=settings.default_fps)
-    detector = Detector(
+    wildlife_detector = Detector(
         settings.yolo_model_path,
         conf_threshold=settings.yolo_conf_threshold,
         iou_threshold=settings.yolo_iou_threshold,
     )
+    human_detector: Optional[Detector] = None
+    if settings.yolo_human_model_path:
+        human_detector = Detector(
+            settings.yolo_human_model_path,
+            conf_threshold=settings.yolo_human_conf_threshold,
+            iou_threshold=settings.yolo_human_iou_threshold,
+            allowed_labels={"human", "person"},
+        )
     tracker = Tracker()
-    pose_estimator = PoseEstimator()
+    pose_estimator = PoseEstimator(
+        model_path=settings.yolo_pose_model_path,
+        conf_threshold=settings.yolo_pose_conf_threshold,
+    )
     event_builder = EventBuilder(pose_estimator=pose_estimator)
     dispatcher = EventDispatcher(settings)
     return InferencePipeline(
         settings=settings,
         listener=listener,
-        detector=detector,
+        wildlife_detector=wildlife_detector,
+        human_detector=human_detector,
         tracker=tracker,
         pose_estimator=pose_estimator,
         event_builder=event_builder,

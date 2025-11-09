@@ -1,4 +1,4 @@
-"""RTMPose skeleton returning canned posture results."""
+"""Placeholder pose estimator."""
 
 from __future__ import annotations
 
@@ -9,6 +9,9 @@ from .detector import Detection
 from .stream_listener import Frame
 
 
+default_keypoints: List[tuple[float, float, float]] = []
+
+
 @dataclass
 class PoseResult:
     label: str
@@ -17,17 +20,11 @@ class PoseResult:
 
 
 class PoseEstimator:
-    def infer(self, frame: Frame, detection: Detection) -> PoseResult:
-        """Return a dummy pose based on the frame index."""
-        if frame.index % 60 == 0:
-            label = "collapse"
-            confidence = 0.9
-        else:
-            label = "standing"
-            confidence = 0.7
+    """Stub estimator returning unknown pose for all detections."""
 
-        return PoseResult(
-            label=label,
-            confidence=confidence,
-            keypoints=[(0.0, 0.0, 1.0)],  # placeholder result
-        )
+    def __init__(self, model_path: str | None = None, conf_threshold: float = 0.25) -> None:
+        self.model_path = model_path
+        self.conf_threshold = conf_threshold
+
+    def infer(self, frame: Frame, detection: Detection) -> PoseResult:
+        return PoseResult(label="unknown", confidence=0.0, keypoints=default_keypoints)
