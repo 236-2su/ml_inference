@@ -98,6 +98,27 @@ class Settings(BaseSettings):
         le=90.0,
         description="If torso angle (deg) is below this threshold, treat person as lying.",
     )
+    pose_heatstroke_watch_seconds: int = Field(
+        300,
+        ge=0,
+        description="Duration (seconds) of continuous lying before raising a heatstroke watch.",
+    )
+    pose_heatstroke_alert_seconds: int = Field(
+        900,
+        ge=0,
+        description="Duration (seconds) of continuous lying before raising a heatstroke alert.",
+    )
+    pose_state_idle_ttl_seconds: int = Field(
+        120,
+        ge=5,
+        description="How long to keep pose state for tracks that disappeared.",
+    )
+    pose_state_min_confidence: float = Field(
+        0.35,
+        ge=0.0,
+        le=1.0,
+        description="Minimum pose confidence to feed into the state machine.",
+    )
     media_output_root: str = Field(
         "./artifacts",
         description="Base directory used for temporary snapshots or clips.",

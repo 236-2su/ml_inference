@@ -22,6 +22,7 @@ from .detector import Detection, Detector
 from .dispatcher import EventDispatcher
 from .event_builder import EventBuilder, EventContext
 from .pose_estimator import PoseEstimator
+from .pose_state_machine import PoseStateMachine
 from .stream_listener import Frame, StreamListener
 from .tracker import Tracker
 
@@ -37,6 +38,7 @@ class InferencePipeline:
         human_detector: Optional[Detector],
         tracker: Tracker,
         pose_estimator: PoseEstimator,
+        pose_state_machine: PoseStateMachine,
         event_builder: EventBuilder,
         dispatcher: EventDispatcher,
     ) -> None:
@@ -46,6 +48,7 @@ class InferencePipeline:
         self.human_detector = human_detector
         self.tracker = tracker
         self.pose_estimator = pose_estimator
+        self.pose_state_machine = pose_state_machine
         self.event_builder = event_builder
         self.dispatcher = dispatcher
 
@@ -81,6 +84,7 @@ class InferencePipeline:
             latency_ms = int((time.perf_counter() - processing_started) * 1000)
             if detection.label == "human":
                 pose = self.pose_estimator.infer(frame, detection)
+                pose_status = self.pose_state_machine.update(track, pose, frame.timestamp)
                 events.append(
                     self.event_builder.build_human_event(
                         ctx=ctx,
@@ -88,6 +92,8 @@ class InferencePipeline:
                         frame_timestamp=frame.timestamp,
                         pose=pose,
                         inference_latency_ms=latency_ms,
+                        status=pose_status.status,
+                        duration_seconds=pose_status.duration_seconds,
                         snapshot_b64=snapshot_b64,
                     )
                 )
@@ -101,6 +107,7 @@ class InferencePipeline:
                         snapshot_b64=snapshot_b64,
                     )
                 )
+        self.pose_state_machine.prune((track.track_id for track in tracks), frame.timestamp)
         return events
 
     def run_once(self, limit: int = 10) -> None:
@@ -154,6 +161,12 @@ def create_pipeline(settings: Settings | None = None) -> InferencePipeline:
         lying_aspect_ratio=settings.pose_lying_aspect_ratio,
         lying_torso_angle_deg=settings.pose_lying_torso_angle_deg,
     )
+    pose_state_machine = PoseStateMachine(
+        heatstroke_watch_seconds=settings.pose_heatstroke_watch_seconds,
+        heatstroke_alert_seconds=settings.pose_heatstroke_alert_seconds,
+        idle_ttl_seconds=settings.pose_state_idle_ttl_seconds,
+        min_pose_confidence=settings.pose_state_min_confidence,
+    )
     event_builder = EventBuilder(pose_estimator=pose_estimator)
     dispatcher = EventDispatcher(settings)
     return InferencePipeline(
@@ -163,6 +176,7 @@ def create_pipeline(settings: Settings | None = None) -> InferencePipeline:
         human_detector=human_detector,
         tracker=tracker,
         pose_estimator=pose_estimator,
+        pose_state_machine=pose_state_machine,
         event_builder=event_builder,
         dispatcher=dispatcher,
     )

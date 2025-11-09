@@ -10,7 +10,15 @@ def test_build_human_event():
     builder = EventBuilder(pose_estimator=PoseEstimator())
     ctx = EventContext(stream_id="stream-1", gpu_enabled=False)
     detection = Detection(label="human", confidence=0.9, bbox=(1, 2, 3, 4))
-    track = Track(track_id=42, detection=detection, first_seen=0, last_seen=0)
+    now = datetime.now(tz=timezone.utc)
+    track = Track(
+        track_id=42,
+        detection=detection,
+        first_seen=0,
+        last_seen=0,
+        first_seen_at=now,
+        last_seen_at=now,
+    )
     pose = PoseResult(label="standing", confidence=0.8, keypoints=[(0.0, 0.0, 1.0)])
     timestamp = datetime.now(tz=timezone.utc)
 
@@ -38,7 +46,15 @@ def test_build_wildlife_event():
     builder = EventBuilder()
     ctx = EventContext(stream_id="stream-1", gpu_enabled=True)
     detection = Detection(label="boar", confidence=0.7, bbox=(10, 20, 30, 40))
-    track = Track(track_id=99, detection=detection, first_seen=0, last_seen=0)
+    now = datetime.now(tz=timezone.utc)
+    track = Track(
+        track_id=99,
+        detection=detection,
+        first_seen=0,
+        last_seen=0,
+        first_seen_at=now,
+        last_seen_at=now,
+    )
     timestamp = datetime.now(tz=timezone.utc)
 
     event = builder.build_wildlife_event(
