@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from app.pose_estimator import classify_pose_from_keypoints
+from app.pose_classifier import PoseClassifierConfig, classify_pose_from_keypoints
 
 
 def _build_keypoints(points: dict[int, tuple[float, float, float]]) -> np.ndarray:
@@ -12,13 +12,11 @@ def _build_keypoints(points: dict[int, tuple[float, float, float]]) -> np.ndarra
     return arr
 
 
+_CONFIG = PoseClassifierConfig(min_keypoint_conf=0.3, lying_aspect_ratio=0.65, lying_torso_angle_deg=35.0)
+
+
 def _classify(keypoints: np.ndarray) -> tuple[str, float]:
-    return classify_pose_from_keypoints(
-        keypoints,
-        min_conf=0.3,
-        lying_aspect_ratio=0.65,
-        lying_torso_angle_deg=35,
-    )
+    return classify_pose_from_keypoints(keypoints, config=_CONFIG)
 
 
 def test_classify_pose_standing():
