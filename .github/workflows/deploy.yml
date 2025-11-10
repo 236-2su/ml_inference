@@ -81,3 +81,4 @@ jobs:
             pytest
 
             sudo systemctl restart ml-inference || sudo systemctl start ml-inference
+            sudo systemctl restart ml-inference-runner || sudo systemctl start ml-inference-runner
