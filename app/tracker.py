@@ -103,3 +103,7 @@ class Tracker:
         if union <= 0:
             return 0.0
         return inter_area / union
+
+    def active_track_ids(self) -> Iterable[int]:
+        """Return the set of track IDs that are still being tracked."""
+        return tuple(self._tracks.keys())

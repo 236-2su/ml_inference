@@ -1,21 +1,28 @@
-"""이벤트 필터링: 변화가 있을 때만 전송"""
+"""Filter duplicate per-track events so downstream systems only see changes."""
+
+from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, Iterable, Optional, Sequence, Tuple
+
+BBox = Tuple[float, float, float, float]
 
 
 @dataclass
 class TrackState:
-    """각 track의 이전 상태 저장"""
-    category: str = "unknown"  # human or wildlife
-    pose_label: str = "unknown"  # sitting/standing/lying (human only)
-    species: str = "unknown"  # 동물 종류 (wildlife only)
-    bbox: tuple = (0, 0, 0, 0)
+    """Snapshot of the last event that was allowed to pass through."""
+
+    category: str = "unknown"
+    pose_label: str = "unknown"
+    species: str = "unknown"
+    bbox: BBox = (0, 0, 0, 0)
     is_present: bool = False
 
 
 class EventFilter:
-    """변화가 있을 때만 이벤트 전송하도록 필터링"""
+    """Simple in-memory filter that debounces repetitive per-track events."""
+
+    _DEFAULT_IMPORTANT_STATUSES = ("fall_detected", "heatstroke_watch", "heatstroke_alert")
 
     def __init__(
         self,
@@ -24,121 +31,106 @@ class EventFilter:
         enable_important_status: bool = True,
         enable_position_change: bool = False,
         position_threshold: int = 100,
+        important_statuses: Optional[Sequence[str]] = None,
     ):
-        """
-        Args:
-            enable_pose_change: 자세 변화 감지 (sitting→standing)
-            enable_presence_change: 등장/사라짐 감지
-            enable_important_status: 중요 상태 항상 전송 (fall, heatstroke)
-            enable_position_change: 위치 변화 감지
-            position_threshold: 위치 변화 임계값 (픽셀)
-        """
         self.enable_pose_change = enable_pose_change
         self.enable_presence_change = enable_presence_change
         self.enable_important_status = enable_important_status
         self.enable_position_change = enable_position_change
-        self.position_threshold = position_threshold
-
+        self.position_threshold = max(0, position_threshold)
+        statuses = important_statuses or self._DEFAULT_IMPORTANT_STATUSES
+        self._important_statuses = {status for status in statuses if status}
         self._track_states: Dict[int, TrackState] = {}
 
     def should_send_event(self, event: dict) -> bool:
-        """이벤트를 전송해야 하는지 판단
+        """Return True when the event should be dispatched."""
 
-        Args:
-            event: 이벤트 딕셔너리
-
-        Returns:
-            True: 전송해야 함 (변화 있음)
-            False: 전송 안 함 (변화 없음)
-        """
         track_id = event.get("track_id")
         if track_id is None:
-            return True  # track_id 없으면 항상 전송
+            return True
 
-        # 1. 중요 상태는 항상 전송
-        if self.enable_important_status:
-            status = event.get("status")
-            if status in ["fall_detected", "heatstroke_watch", "heatstroke_alert"]:
-                return True
-
-        # 이전 상태 가져오기
-        prev_state = self._track_states.get(track_id)
-
-        # 2. 새로 등장한 사람 (첫 감지)
-        if prev_state is None:
-            if self.enable_presence_change:
-                self._update_state(track_id, event)
-                return True  # 첫 등장 → 전송
-            else:
-                self._update_state(track_id, event)
-                return False
-
-        # 3. 자세 변화 감지
-        if self.enable_pose_change:
-            current_pose = event.get("pose_label", "unknown")
-            if current_pose != prev_state.pose_label:
-                self._update_state(track_id, event)
-                return True  # 자세 변화 → 전송
-
-        # 4. 위치 변화 감지 (선택적)
-        if self.enable_position_change:
-            current_bbox = event.get("bbox", (0, 0, 0, 0))
-            if self._has_position_changed(prev_state.bbox, current_bbox):
-                self._update_state(track_id, event)
-                return True  # 위치 크게 이동 → 전송
-
-        # 상태 업데이트 (전송은 안 함)
-        self._update_state(track_id, event)
-        return False  # 변화 없음 → 전송 안 함
-
-    def mark_track_disappeared(self, track_id: int) -> bool:
-        """사람이 사라졌을 때 호출
-
-        Args:
-            track_id: 사라진 track ID
-
-        Returns:
-            True: 사라짐 이벤트 전송해야 함
-            False: 전송 안 함
-        """
-        if not self.enable_presence_change:
-            return False
-
-        if track_id in self._track_states:
-            del self._track_states[track_id]
-            return True  # 사라짐 → 전송
-
-        return False
-
-    def _update_state(self, track_id: int, event: dict):
-        """track 상태 업데이트"""
-        self._track_states[track_id] = TrackState(
-            pose_label=event.get("pose_label", "unknown"),
-            bbox=event.get("bbox", (0, 0, 0, 0)),
-            is_present=True,
+        status = event.get("status")
+        status_triggered = (
+            self.enable_important_status and status is not None and status in self._important_statuses
         )
 
-    def _has_position_changed(
-        self, prev_bbox: tuple, current_bbox: tuple
-    ) -> bool:
-        """위치가 크게 변했는지 확인"""
-        if not prev_bbox or not current_bbox:
+        prev_state = self._track_states.get(track_id)
+        category = event.get("category", prev_state.category if prev_state else "unknown")
+        pose_label = event.get("pose_label", prev_state.pose_label if prev_state else "unknown")
+        species = event.get("species", prev_state.species if prev_state else "unknown")
+        bbox = self._normalize_bbox(event.get("bbox"))
+
+        should_send = False
+        if prev_state is None:
+            should_send = self.enable_presence_change
+        else:
+            if prev_state.category != category:
+                should_send = True
+            elif self.enable_pose_change and category == "human" and pose_label != prev_state.pose_label:
+                should_send = True
+            elif category == "wildlife" and species != prev_state.species:
+                should_send = True
+            elif self.enable_position_change and self._has_position_changed(prev_state.bbox, bbox):
+                should_send = True
+
+        if status_triggered:
+            should_send = True
+
+        self._track_states[track_id] = TrackState(
+            category=category,
+            pose_label=pose_label,
+            species=species,
+            bbox=bbox,
+            is_present=True,
+        )
+        return should_send
+
+    def mark_track_disappeared(self, track_id: int) -> bool:
+        """Remove cached state for a disappeared track and emit presence-change events."""
+
+        if not self.enable_presence_change or track_id not in self._track_states:
+            return False
+        del self._track_states[track_id]
+        return True
+
+    def prune(self, active_track_ids: Iterable[int]) -> None:
+        """Drop cached states for tracks no longer monitored."""
+
+        active = set(active_track_ids)
+        for track_id in list(self._track_states.keys()):
+            if track_id not in active:
+                del self._track_states[track_id]
+
+    def get_stats(self) -> dict:
+        """Return basic filter stats used for debugging."""
+
+        return {
+            "active_tracks": len(self._track_states),
+            "tracked_ids": list(self._track_states.keys()),
+        }
+
+    @staticmethod
+    def _normalize_bbox(raw_bbox: object) -> BBox:
+        if isinstance(raw_bbox, (list, tuple)) and len(raw_bbox) == 4:
+            try:
+                return (
+                    float(raw_bbox[0]),
+                    float(raw_bbox[1]),
+                    float(raw_bbox[2]),
+                    float(raw_bbox[3]),
+                )
+            except (TypeError, ValueError):
+                return (0, 0, 0, 0)
+        return (0, 0, 0, 0)
+
+    def _has_position_changed(self, prev_bbox: BBox, current_bbox: BBox) -> bool:
+        if prev_bbox == (0, 0, 0, 0) or current_bbox == (0, 0, 0, 0):
             return False
 
-        # 중심점 계산
         prev_x = prev_bbox[0] + prev_bbox[2] / 2
         prev_y = prev_bbox[1] + prev_bbox[3] / 2
         curr_x = current_bbox[0] + current_bbox[2] / 2
         curr_y = current_bbox[1] + current_bbox[3] / 2
 
-        # 유클리드 거리
         distance = ((curr_x - prev_x) ** 2 + (curr_y - prev_y) ** 2) ** 0.5
-
         return distance > self.position_threshold
-
-    def get_stats(self) -> dict:
-        """필터링 통계 반환"""
-        return {
-            "active_tracks": len(self._track_states),
-            "tracked_people": list(self._track_states.keys()),
-        }

@@ -7,6 +7,7 @@
 - `app/pose_estimator.py` – ONNXRuntime + RTMPose 추론, `app/pose_classifier.py`에 위임된 휴리스틱으로 포즈 라벨링
 - `app/pose_state_machine.py` – 트래킹 ID마다 낙상/열사병 상태를 계산
 - `app/runner.py` – StreamListener → Detector → Tracker → PoseEstimator → EventBuilder → EventDispatcher 순서로 파이프라인 실행
+- pp/event_filter.py – Duplicate track events are filtered before dispatch
 - `fastapi_app/main.py` – 수신 측 FastAPI 예제
 - `scripts/rtmpose_image_eval.py` – 정적 이미지에서 포즈 추론 결과를 확인하는 도구
 

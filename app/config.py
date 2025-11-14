@@ -155,6 +155,31 @@ class Settings(BaseSettings):
         12,
         description="Processing frame rate cap for the prototype stage.",
     )
+    event_filter_enabled: bool = Field(
+        True,
+        description="Enable per-track event filtering to suppress duplicate payloads.",
+    )
+    event_filter_pose_change: bool = Field(
+        True,
+        description="Emit human events when pose labels change.",
+    )
+    event_filter_presence_change: bool = Field(
+        True,
+        description="Emit events when new tracks appear or disappear.",
+    )
+    event_filter_important_status: bool = Field(
+        True,
+        description="Always emit events when status is fall/heatstroke.",
+    )
+    event_filter_position_change: bool = Field(
+        False,
+        description="Emit events when bounding boxes move more than the configured threshold.",
+    )
+    event_filter_position_threshold: int = Field(
+        120,
+        ge=0,
+        description="Minimum center-point distance (pixels) treated as a position change.",
+    )
 
 
 # NOTE: functools.lru_cache requires an explicit call on Python 3.7.

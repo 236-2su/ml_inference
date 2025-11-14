@@ -58,6 +58,12 @@
 | `MEDIA_OUTPUT_ROOT` | Local or S3 storage base path | `./artifacts` |
 | `GPU_ENABLED` | Feature flag for CUDA mode (`true`/`false`) | `false` (set `true` after GPU cutover) |
 | `STREAM_DEFAULT_FPS` | Frame-processing cap | `12` |
+| `EVENT_FILTER_ENABLED` | Toggle duplicate-event filtering | `true` |
+| `EVENT_FILTER_POSE_CHANGE` | Emit human events when pose labels change | `true` |
+| `EVENT_FILTER_PRESENCE_CHANGE` | Emit events when tracks appear or disappear | `true` |
+| `EVENT_FILTER_IMPORTANT_STATUS` | Always forward fall/heatstroke statuses | `true` |
+| `EVENT_FILTER_POSITION_CHANGE` | Emit events when tracked subjects move more than the threshold | `false` |
+| `EVENT_FILTER_POSITION_THRESHOLD` | Pixel distance between bbox centers to treat as movement | `120` |
 
 ## 6. Capture & Retention Policy
 - **Snapshot target**: (local path, S3 bucket, prefix)

@@ -78,6 +78,8 @@ class InferencePipeline:
             detections.extend(wildlife_detections)
 
         tracks = self.tracker.update(frame, detections)
+        if self.event_filter:
+            self.event_filter.prune(self.tracker.active_track_ids())
         ctx = EventContext(
             stream_id=self.settings.media_rpi_rtsp_url,
             gpu_enabled=self.settings.gpu_enabled,
@@ -196,6 +198,15 @@ def create_pipeline(settings: Settings | None = None) -> InferencePipeline:
     )
     event_builder = EventBuilder(pose_estimator=pose_estimator)
     dispatcher = EventDispatcher(settings)
+    event_filter = None
+    if settings.event_filter_enabled:
+        event_filter = EventFilter(
+            enable_pose_change=settings.event_filter_pose_change,
+            enable_presence_change=settings.event_filter_presence_change,
+            enable_important_status=settings.event_filter_important_status,
+            enable_position_change=settings.event_filter_position_change,
+            position_threshold=settings.event_filter_position_threshold,
+        )
     return InferencePipeline(
         settings=settings,
         listener=listener,
@@ -206,6 +217,7 @@ def create_pipeline(settings: Settings | None = None) -> InferencePipeline:
         pose_state_machine=pose_state_machine,
         event_builder=event_builder,
         dispatcher=dispatcher,
+        event_filter=event_filter,
     )
 
 
