@@ -73,13 +73,33 @@ class Settings(BaseSettings):
     )
     yolo_pose_model_path: str = Field(
         "yolov8x-pose.pt",
-        description="Ultralytics pose model used for human posture estimation.",
+        description="Ultralytics pose model used for human posture estimation (RTMPose).",
     )
     yolo_pose_conf_threshold: float = Field(
         0.35,
         ge=0.0,
         le=1.0,
         description="Confidence threshold applied to pose predictions.",
+    )
+    svm_pose_model_path: Optional[str] = Field(
+        "models/svm_model_sit_stand_lie.pkl",
+        description="MediaPipe + SVM pose classifier model path.",
+    )
+    use_mediapipe_svm: bool = Field(
+        True,
+        description="Use MediaPipe + SVM instead of RTMPose for pose estimation.",
+    )
+    mediapipe_min_detection_confidence: float = Field(
+        0.5,
+        ge=0.0,
+        le=1.0,
+        description="Minimum detection confidence for MediaPipe Pose.",
+    )
+    mediapipe_min_tracking_confidence: float = Field(
+        0.5,
+        ge=0.0,
+        le=1.0,
+        description="Minimum tracking confidence for MediaPipe Pose.",
     )
     pose_keypoint_conf_threshold: float = Field(
         0.002,

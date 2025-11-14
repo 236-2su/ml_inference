@@ -21,7 +21,9 @@ from .config import Settings, get_settings
 from .detector import Detection, Detector
 from .dispatcher import EventDispatcher
 from .event_builder import EventBuilder, EventContext
+from .event_filter import EventFilter
 from .pose_estimator import PoseEstimator
+from .pose_estimator_mediapipe import MediaPipePoseEstimator
 from .pose_state_machine import PoseStateMachine
 from .stream_listener import Frame, StreamListener
 from .tracker import Tracker
@@ -37,10 +39,11 @@ class InferencePipeline:
         wildlife_detector: Detector,
         human_detector: Optional[Detector],
         tracker: Tracker,
-        pose_estimator: PoseEstimator,
+        pose_estimator: PoseEstimator | MediaPipePoseEstimator,
         pose_state_machine: PoseStateMachine,
         event_builder: EventBuilder,
         dispatcher: EventDispatcher,
+        event_filter: Optional[EventFilter] = None,
     ) -> None:
         self.settings = settings
         self.listener = listener
@@ -51,6 +54,7 @@ class InferencePipeline:
         self.pose_state_machine = pose_state_machine
         self.event_builder = event_builder
         self.dispatcher = dispatcher
+        self.event_filter = event_filter
 
     def process_frame(self, frame: Frame) -> List[dict]:
         processing_started = time.perf_counter()
@@ -108,6 +112,16 @@ class InferencePipeline:
                     )
                 )
         self.pose_state_machine.prune((track.track_id for track in tracks), frame.timestamp)
+
+        # 이벤트 필터링 적용 (변화가 있을 때만 전송)
+        if self.event_filter:
+            filtered_events = [
+                event for event in events
+                if self.event_filter.should_send_event(event)
+            ]
+            log.debug(f"Events filtered: {len(events)} → {len(filtered_events)}")
+            return filtered_events
+
         return events
 
     def run_once(self, limit: int = 10) -> None:
@@ -154,13 +168,26 @@ def create_pipeline(settings: Settings | None = None) -> InferencePipeline:
             allowed_labels={"human", "person"},
         )
     tracker = Tracker()
-    pose_estimator = PoseEstimator(
-        model_path=settings.yolo_pose_model_path,
-        conf_threshold=settings.yolo_pose_conf_threshold,
-        keypoint_conf_threshold=settings.pose_keypoint_conf_threshold,
-        lying_aspect_ratio=settings.pose_lying_aspect_ratio,
-        lying_torso_angle_deg=settings.pose_lying_torso_angle_deg,
-    )
+
+    # Choose pose estimator based on configuration
+    if settings.use_mediapipe_svm:
+        log.info("Using MediaPipe + SVM pose estimator")
+        pose_estimator = MediaPipePoseEstimator(
+            svm_model_path=settings.svm_pose_model_path,
+            conf_threshold=settings.yolo_pose_conf_threshold,
+            min_detection_confidence=settings.mediapipe_min_detection_confidence,
+            min_tracking_confidence=settings.mediapipe_min_tracking_confidence,
+        )
+    else:
+        log.info("Using RTMPose ONNX pose estimator")
+        pose_estimator = PoseEstimator(
+            model_path=settings.yolo_pose_model_path,
+            conf_threshold=settings.yolo_pose_conf_threshold,
+            keypoint_conf_threshold=settings.pose_keypoint_conf_threshold,
+            lying_aspect_ratio=settings.pose_lying_aspect_ratio,
+            lying_torso_angle_deg=settings.pose_lying_torso_angle_deg,
+        )
+
     pose_state_machine = PoseStateMachine(
         heatstroke_watch_seconds=settings.pose_heatstroke_watch_seconds,
         heatstroke_alert_seconds=settings.pose_heatstroke_alert_seconds,
