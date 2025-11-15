@@ -75,3 +75,5 @@ sudo systemctl restart ml-inference
 - **포즈 분류 오차**: `.env`의 `POSE_KEYPOINT_CONF_THRESHOLD`, `POSE_LYING_ASPECT_RATIO` 등을 조정한 뒤 `scripts/rtmpose_image_eval.py`로 빠르게 검증하세요.
 - **CI/CD 실패**: Actions 로그를 참고하고, 서버 측 `/var/log/syslog` 및 `journalctl -u ml-inference`에서 runtime 로그를 확인하세요.
 
+
+
