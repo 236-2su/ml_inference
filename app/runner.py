@@ -6,6 +6,7 @@ import base64
 import logging
 import time
 from typing import Iterable, List, Optional
+from urllib.parse import urlparse
 
 import numpy as np
 
@@ -29,6 +30,30 @@ from .stream_listener import Frame, StreamListener
 from .tracker import Tracker
 
 log = logging.getLogger(__name__)
+
+
+def extract_serial_from_rtsp(rtsp_url: str) -> str:
+    """
+    Extract serial number from RTSP URL path.
+
+    Examples:
+        rtsp://.../stream/00000000 → "00000000"
+        rtsp://.../stream/99999999 → "99999999"
+        rtsp://.../cctv → "cctv"
+
+    Args:
+        rtsp_url: RTSP URL string
+
+    Returns:
+        Serial number extracted from URL path, or "unknown" if extraction fails
+    """
+    try:
+        path = urlparse(rtsp_url).path  # "/stream/00000000"
+        serial = path.split('/')[-1]     # "00000000"
+        return serial if serial else "unknown"
+    except Exception as e:
+        log.warning(f"Failed to extract serial from RTSP URL: {e}")
+        return "unknown"
 
 
 class InferencePipeline:
@@ -80,8 +105,15 @@ class InferencePipeline:
         tracks = self.tracker.update(frame, detections)
         if self.event_filter:
             self.event_filter.prune(self.tracker.active_track_ids())
+
+        # Use manual serial number if set, otherwise extract from RTSP URL
+        serial_number = (
+            self.settings.scarecrow_serial_number
+            if self.settings.scarecrow_serial_number
+            else extract_serial_from_rtsp(self.settings.media_rpi_rtsp_url)
+        )
         ctx = EventContext(
-            stream_id=self.settings.scarecrow_serial_number,
+            stream_id=serial_number,
             gpu_enabled=self.settings.gpu_enabled,
         )
         events: List[dict] = []
