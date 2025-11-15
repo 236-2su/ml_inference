@@ -19,7 +19,7 @@ def test_build_human_event():
         first_seen_at=now,
         last_seen_at=now,
     )
-    pose = PoseResult(label="standing", confidence=0.8, keypoints=[(0.0, 0.0, 1.0)])
+    pose = PoseResult(label="standing", confidence=0.8, keypoints=[(0.5, 0.6, 0.9)])
     timestamp = datetime.now(tz=timezone.utc)
 
     event = builder.build_human_event(
@@ -34,12 +34,16 @@ def test_build_human_event():
     )
 
     assert event["category"] == "human"
+    assert event["stream_id"] == "stream-1"
     assert event["pose_label"] == "standing"
     assert event["inference_latency_ms"] == 123
     assert event["status"] == "fall_detected"
     assert event["duration_seconds"] == 17
     assert event["image_jpeg_base64"] == "snapshot"
-    assert "stream_id" not in event
+    assert "keypoints" in event
+    assert len(event["keypoints"]) == 1
+    assert event["keypoints"][0] == [0.5, 0.6, 0.9]
+    assert "gpu_enabled" not in event
 
 
 def test_build_wildlife_event():
@@ -66,6 +70,7 @@ def test_build_wildlife_event():
     )
 
     assert event["category"] == "wildlife"
+    assert event["stream_id"] == "stream-1"
     assert event["species"] == "boar"
     assert event["species_confidence"] == 0.7
     assert event["inference_latency_ms"] == 77

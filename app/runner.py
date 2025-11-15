@@ -81,7 +81,7 @@ class InferencePipeline:
         if self.event_filter:
             self.event_filter.prune(self.tracker.active_track_ids())
         ctx = EventContext(
-            stream_id=self.settings.media_rpi_rtsp_url,
+            stream_id=self.settings.scarecrow_serial_number,
             gpu_enabled=self.settings.gpu_enabled,
         )
         events: List[dict] = []

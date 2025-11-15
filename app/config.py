@@ -25,6 +25,10 @@ class Settings(BaseSettings):
         "rtsp://example.local:8554/stream",
         description="Primary RTSP source pulled by mediaMTX.",
     )
+    scarecrow_serial_number: str = Field(
+        "00000000",
+        description="Scarecrow device serial number for HEOBY backend identification (8 digits).",
+    )
     fastapi_endpoint: HttpUrl = Field(
         "http://localhost:8000/events",
         description="Endpoint that receives inference events.",

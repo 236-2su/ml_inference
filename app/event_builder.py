@@ -14,7 +14,7 @@ from .tracker import Track
 
 @dataclass
 class EventContext:
-    """Metadata kept for logging but not serialized."""
+    """Metadata for event serialization."""
 
     stream_id: str
     gpu_enabled: bool
@@ -39,6 +39,7 @@ class EventBuilder:
         event: Dict[str, object] = {
             "event_id": str(uuid.uuid4()),
             "category": "human",
+            "stream_id": ctx.stream_id,
             "track_id": track.track_id,
             "timestamp_utc": frame_timestamp.isoformat(),
             "bbox": detection.bbox,
@@ -47,6 +48,11 @@ class EventBuilder:
             "pose_label": pose.label,
             "pose_confidence": pose.confidence,
         }
+        if pose.keypoints:
+            event["keypoints"] = [
+                [float(x), float(y), float(conf)]
+                for x, y, conf in pose.keypoints
+            ]
         if status:
             event["status"] = status
         if duration_seconds is not None:
@@ -67,6 +73,7 @@ class EventBuilder:
         event: Dict[str, object] = {
             "event_id": str(uuid.uuid4()),
             "category": "wildlife",
+            "stream_id": ctx.stream_id,
             "species": detection.label,
             "species_confidence": detection.confidence,
             "track_id": track.track_id,
