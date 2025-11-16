@@ -16,10 +16,7 @@ venv/
 coverage.xml
 htmlcov/
 
-# Environment files (global)
-.env
-.env.*
-!.env
+
 
 # Logs
 *.log

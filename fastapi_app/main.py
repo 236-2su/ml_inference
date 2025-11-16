@@ -38,13 +38,7 @@ def health() -> Dict[str, str]:
 @app.post("/events", status_code=status.HTTP_202_ACCEPTED)
 def ingest_event(
     payload: EventPayload,
-    authorization: Optional[str] = Header(default=None),
 ) -> Dict[str, str]:
-    # Skeleton check (replace with real auth in production).
-    if authorization is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing Authorization header",
-        )
+    # 백엔드에서 permit 열어놨으므로 인증 체크 제거
     _EVENT_STORE.append(payload.dict())
     return {"status": "queued", "event_id": payload.event_id}

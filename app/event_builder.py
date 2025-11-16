@@ -53,8 +53,7 @@ class EventBuilder:
                 [float(x), float(y), float(conf)]
                 for x, y, conf in pose.keypoints
             ]
-        if status:
-            event["status"] = status
+        # status 필드 제거됨 - 백엔드에서 불필요
         if duration_seconds is not None:
             event["duration_seconds"] = duration_seconds
         if snapshot_b64:
