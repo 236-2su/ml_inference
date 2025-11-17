@@ -51,7 +51,7 @@ nano .env
 RTSP_STREAMS=00000000,99999999
 RTSP_BASE_URL=rtsp://k13e106.p.ssafy.io:8554/stream
 FASTAPI_ENDPOINT=https://k13e106.p.ssafy.io/dev/api/ai/events
-STREAM_DEFAULT_FPS=2
+DEFAULT_FPS=2  # 기존 STREAM_DEFAULT_FPS도 호환 입력으로 동작
 USE_MEDIAPIPE_SVM=true
 ```
 
@@ -253,7 +253,7 @@ netstat -tunlp | grep 8181
 성능 향상이 필요하면:
 ```bash
 # .env 파일 수정
-STREAM_DEFAULT_FPS=5  # FPS 증가
+DEFAULT_FPS=5  # FPS 증가 (STREAM_DEFAULT_FPS도 동일하게 동작)
 GPU_ENABLED=true      # GPU 사용 (CUDA 설치 필요)
 INCLUDE_SNAPSHOT=false  # 스냅샷 비활성화 (네트워크 절약)
 ```

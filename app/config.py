@@ -8,7 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
-from pydantic import Field, HttpUrl
+from pydantic import AliasChoices, Field, HttpUrl, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -155,9 +155,19 @@ class Settings(BaseSettings):
         False,
         description="Feature flag toggled during GPU cutover.",
     )
-    default_fps: int = Field(
-        12,
-        description="Processing frame rate cap for the prototype stage.",
+    default_fps: float = Field(
+        12.0,
+        gt=0.0,
+        description="Processing frame rate cap for the prototype stage (fractional values supported).",
+    )
+    stream_default_fps: Optional[float] = Field(
+        default=None,
+        exclude=True,
+        description="Deprecated alias for DEFAULT_FPS (STREAM_DEFAULT_FPS).",
+        validation_alias=AliasChoices(
+            "STREAM_DEFAULT_FPS",
+            "stream_default_fps",
+        ),
     )
     event_filter_enabled: bool = Field(
         True,
@@ -184,6 +194,12 @@ class Settings(BaseSettings):
         ge=0,
         description="Minimum center-point distance (pixels) treated as a position change.",
     )
+    @model_validator(mode="after")
+    def _apply_stream_default_fps(self) -> "Settings":
+        """Allow STREAM_DEFAULT_FPS to override DEFAULT_FPS for backward compatibility."""
+        if self.stream_default_fps is not None:
+            self.default_fps = self.stream_default_fps
+        return self
 
 
 # NOTE: functools.lru_cache requires an explicit call on Python 3.7.

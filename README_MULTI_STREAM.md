@@ -164,7 +164,7 @@ sudo journalctl -u ml-inference-99999999 -f
 MEDIA_RPI_RTSP_URL=rtsp://k13e106.p.ssafy.io:8554/stream/00000000
 FASTAPI_ENDPOINT=https://k13e106.p.ssafy.io/dev/api/events
 INCLUDE_SNAPSHOT=true
-STREAM_DEFAULT_FPS=2
+DEFAULT_FPS=2  # STREAM_DEFAULT_FPS도 입력 가능
 # ... other settings
 ```
 
@@ -174,7 +174,7 @@ STREAM_DEFAULT_FPS=2
 MEDIA_RPI_RTSP_URL=rtsp://k13e106.p.ssafy.io:8554/stream/99999999
 FASTAPI_ENDPOINT=https://k13e106.p.ssafy.io/dev/api/events
 INCLUDE_SNAPSHOT=true
-STREAM_DEFAULT_FPS=2
+DEFAULT_FPS=2  # STREAM_DEFAULT_FPS도 입력 가능
 # ... other settings
 ```
 
@@ -322,7 +322,7 @@ SCARECROW_SERIAL_NUMBER=00000000
 
 **Solutions:**
 1. **Enable GPU:** `GPU_ENABLED=true` (reduces CPU memory)
-2. **Reduce FPS:** `STREAM_DEFAULT_FPS=1` (lower processing)
+2. **Reduce FPS:** `DEFAULT_FPS=1` (STREAM_DEFAULT_FPS도 동작) – lower processing
 3. **Disable snapshots:** `INCLUDE_SNAPSHOT=false` (saves bandwidth)
 4. **Use smaller models:** Switch to lighter YOLO models
 

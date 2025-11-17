@@ -35,12 +35,15 @@ class StreamListener:
     def __init__(
         self,
         source_url: str,
-        fps_limit: int = 12,
+        fps_limit: float = 12.0,
         reconnect_delay: float = 3.0,
     ) -> None:
         self.source_url = source_url
-        self.fps_limit = max(fps_limit, 1)
-        self._interval = 1.0 / float(self.fps_limit)
+        fps_value = float(fps_limit)
+        if fps_value <= 0:
+            raise ValueError("fps_limit must be greater than zero")
+        self.fps_limit = fps_value
+        self._interval = 1.0 / self.fps_limit
         self._reconnect_delay = max(reconnect_delay, 1.0)
         self._cap: Optional[cv2.VideoCapture] = None
         self._frame_index = 0
