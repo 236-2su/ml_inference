@@ -50,8 +50,14 @@ class StreamListener:
         if self._cap is not None and self._cap.isOpened():
             return
         log.info("Connecting to stream %s", self.source_url)
-        self._cap = cv2.VideoCapture(self.source_url)
-        if not self._cap.isOpened():
+        # Use RTSP over TCP with larger buffer for better stability over long distances
+        import os
+        os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|buffer_size;10240000|max_delay;500000000|reorder_queue_size;5000"
+        self._cap = cv2.VideoCapture(self.source_url, cv2.CAP_FFMPEG)
+        if self._cap.isOpened():
+            # Increase OpenCV buffer to handle latency
+            self._cap.set(cv2.CAP_PROP_BUFFERSIZE, 10)
+        else:
             raise RuntimeError(f"Unable to open RTSP stream {self.source_url}")
 
     def _read_frame(self) -> Optional[np.ndarray]:
