@@ -80,6 +80,10 @@ class InferencePipeline:
         self.event_builder = event_builder
         self.dispatcher = dispatcher
         self.event_filter = event_filter
+        self._process_interval = (
+            1.0 / settings.default_fps if settings.default_fps > 0 else 0.0
+        )
+        self._last_process_time = 0.0
 
     def process_frame(self, frame: Frame) -> List[dict]:
         processing_started = time.perf_counter()
@@ -160,12 +164,16 @@ class InferencePipeline:
 
     def run_once(self, limit: int = 10) -> None:
         for frame in self.listener.once(limit=limit):
+            if not self._should_process_frame():
+                continue
             events = self.process_frame(frame)
             if events:
                 self.dispatcher.send_batch(events)
 
     def run_forever(self) -> None:
         for frame in self.listener.frames():
+            if not self._should_process_frame():
+                continue
             events = self.process_frame(frame)
             if events:
                 self.dispatcher.send_batch(events)
@@ -184,10 +192,25 @@ class InferencePipeline:
         log.debug("Snapshot capture skipped for frame %s (unsupported type)", frame.index)
         return None
 
+    def _should_process_frame(self) -> bool:
+        """Throttle inference to the configured FPS while keeping RTSP reads fast."""
+        if self._process_interval <= 0:
+            return True
+        now = time.perf_counter()
+        if now - self._last_process_time >= self._process_interval:
+            self._last_process_time = now
+            return True
+        log.debug(
+            "Skipping frame to honor inference FPS cap (elapsed=%.3fs needed=%.3fs)",
+            now - self._last_process_time,
+            self._process_interval,
+        )
+        return False
+
 
 def create_pipeline(settings: Settings | None = None) -> InferencePipeline:
     settings = settings or get_settings()
-    listener = StreamListener(settings.media_rpi_rtsp_url, fps_limit=settings.default_fps)
+    listener = StreamListener(settings.media_rpi_rtsp_url, fps_limit=settings.listener_fps)
     wildlife_detector = Detector(
         settings.yolo_model_path,
         conf_threshold=settings.yolo_conf_threshold,

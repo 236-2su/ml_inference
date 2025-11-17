@@ -158,7 +158,17 @@ class Settings(BaseSettings):
     default_fps: float = Field(
         12.0,
         gt=0.0,
-        description="Processing frame rate cap for the prototype stage (fractional values supported).",
+        description="Maximum inference/events per second (set low to reduce CPU load; fractional values supported).",
+    )
+    listener_fps: float = Field(
+        12.0,
+        gt=0.0,
+        description="RTSP socket read FPS cap; keep this relatively high (e.g., 10-12) so buffers do not overrun.",
+        validation_alias=AliasChoices(
+            "LISTENER_FPS",
+            "stream_listener_fps",
+            "STREAM_LISTENER_FPS",
+        ),
     )
     stream_default_fps: Optional[float] = Field(
         default=None,
