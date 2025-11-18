@@ -25,7 +25,7 @@ class Track:
 class Tracker:
     """Lightweight IoU-based tracker that keeps IDs stable across frames."""
 
-    def __init__(self, iou_threshold: float = 0.4, max_idle_frames: int = 15) -> None:
+    def __init__(self, iou_threshold: float = 0.4, max_idle_frames: int = 60) -> None:
         self._id_gen = itertools.count(start=1)
         self._tracks: Dict[int, Track] = {}
         self._iou_threshold = iou_threshold
