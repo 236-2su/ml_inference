@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import pickle
+import time
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -66,6 +67,8 @@ class MediaPipePoseEstimator:
         Returns:
             PoseResult with label, confidence, and keypoints
         """
+        inference_start = time.perf_counter()
+
         if detection.confidence < self.conf_threshold:
             return PoseResult(label="unknown", confidence=0.0, keypoints=default_keypoints)
 
@@ -77,20 +80,28 @@ class MediaPipePoseEstimator:
             return PoseResult(label="unknown", confidence=0.0, keypoints=default_keypoints)
 
         # Extract person ROI from bounding box
+        crop_start = time.perf_counter()
         cropped_person = self._extract_person_roi(image, detection.bbox)
         if cropped_person is None:
             return PoseResult(label="unknown", confidence=0.0, keypoints=default_keypoints)
+        crop_time_ms = (time.perf_counter() - crop_start) * 1000
 
         # Extract MediaPipe landmarks
+        mediapipe_start = time.perf_counter()
         features, keypoints_list = self._extract_mediapipe_features(cropped_person)
+        mediapipe_time_ms = (time.perf_counter() - mediapipe_start) * 1000
+
         if features is None or len(features) != 66:
+            log.debug("MediaPipe pose estimation took %.2f ms (no landmarks)", mediapipe_time_ms)
             return PoseResult(label="unknown", confidence=0.0, keypoints=default_keypoints)
 
         # Predict using SVM
         try:
+            svm_start = time.perf_counter()
             prediction = self._svm_model.predict(np.array(features).reshape(1, -1))[0]
             # Get decision function scores for confidence
             decision_scores = self._svm_model.decision_function(np.array(features).reshape(1, -1))
+            svm_time_ms = (time.perf_counter() - svm_start) * 1000
 
             # Convert decision scores to confidence (using softmax-like normalization)
             if len(decision_scores.shape) > 1:
@@ -104,6 +115,17 @@ class MediaPipePoseEstimator:
             confidence = max(0.0, confidence)
 
             label = LABEL_MAP.get(int(prediction), "unknown")
+
+            total_time_ms = (time.perf_counter() - inference_start) * 1000
+            log.info(
+                "Pose estimation complete: crop=%.2f ms, mediapipe=%.2f ms, svm=%.2f ms, total=%.2f ms, label=%s, confidence=%.3f",
+                crop_time_ms,
+                mediapipe_time_ms,
+                svm_time_ms,
+                total_time_ms,
+                label,
+                confidence
+            )
 
             return PoseResult(label=label, confidence=confidence, keypoints=keypoints_list)
 

@@ -87,7 +87,7 @@ def main():
     stream_ids = [s.strip() for s in stream_ids if s.strip()]
 
     # RTSP 베이스 URL (환경 변수 또는 기본값)
-    rtsp_base_url = os.getenv('RTSP_BASE_URL', 'rtsp://k13e106.p.ssafy.io:8554/stream')
+    rtsp_base_url = os.getenv('RTSP_BASE_URL', 'rtsp://k13e106.p.ssafy.io:8554')
 
     logger.info(f"Starting multi-stream pipeline for {len(stream_ids)} streams: {stream_ids}")
     logger.info(f"RTSP base URL: {rtsp_base_url}")

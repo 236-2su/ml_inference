@@ -64,8 +64,8 @@ class StreamListener:
             log.info("Connecting to stream %s", self.source_url)
             cap = cv2.VideoCapture(self.source_url, cv2.CAP_FFMPEG)
             if cap.isOpened():
-                # Increase OpenCV buffer to handle latency
-                cap.set(cv2.CAP_PROP_BUFFERSIZE, 10)
+                # Set buffer to 1 to minimize latency and get latest frames
+                cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
                 self._cap = cap
                 log.info("Successfully connected to stream %s", self.source_url)
                 return
@@ -81,9 +81,15 @@ class StreamListener:
     def _read_frame(self) -> Optional[np.ndarray]:
         if self._cap is None:
             return None
-        success, frame = self._cap.read()
-        if not success or frame is None:
-            return None
+
+        # Flush buffer to get the latest frame (discard old buffered frames)
+        frame = None
+        for _ in range(5):  # Read up to 5 frames to clear buffer
+            success, new_frame = self._cap.read()
+            if not success or new_frame is None:
+                break
+            frame = new_frame  # Keep only the latest frame
+
         return frame
 
     def _reconnect(self) -> None:

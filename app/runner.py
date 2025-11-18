@@ -221,10 +221,26 @@ class InferencePipeline:
 def create_pipeline(settings: Settings | None = None) -> InferencePipeline:
     settings = settings or get_settings()
     listener = StreamListener(settings.media_rpi_rtsp_url, fps_limit=settings.listener_fps)
+
+    # Determine device based on GPU_ENABLED setting and CUDA availability
+    device = None  # Auto-detect (will use GPU if available)
+    if settings.gpu_enabled:
+        try:
+            import torch
+            device = "cuda:0" if torch.cuda.is_available() else "cpu"
+            log.info(f"GPU_ENABLED=true, using device: {device}")
+        except ImportError:
+            device = "cpu"
+            log.warning("GPU_ENABLED=true but PyTorch not available, using CPU")
+    else:
+        device = "cpu"
+        log.info("GPU_ENABLED=false, using device: cpu")
+
     wildlife_detector = Detector(
         settings.yolo_model_path,
         conf_threshold=settings.yolo_conf_threshold,
         iou_threshold=settings.yolo_iou_threshold,
+        device=device,
     )
     human_detector: Optional[Detector] = None
     if settings.yolo_human_model_path:
@@ -233,6 +249,7 @@ def create_pipeline(settings: Settings | None = None) -> InferencePipeline:
             conf_threshold=settings.yolo_human_conf_threshold,
             iou_threshold=settings.yolo_human_iou_threshold,
             allowed_labels={"human", "person"},
+            device=device,
         )
     tracker = Tracker()
 
