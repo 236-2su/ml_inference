@@ -107,6 +107,16 @@ class InferencePipeline:
             detections.extend(wildlife_detections)
 
         tracks = self.tracker.update(frame, detections)
+        log.info(
+            "Frame %s: detections=%d tracks=%d",
+            frame.index,
+            len(detections),
+            len(tracks),
+        )
+        print(
+            f"[DEBUG] frame={frame.index} detections={len(detections)} tracks={len(tracks)}",
+            flush=True,
+        )
         if self.event_filter:
             self.event_filter.prune(self.tracker.active_track_ids())
 
@@ -277,6 +287,12 @@ def create_pipeline(settings: Settings | None = None) -> InferencePipeline:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='[SINGLE] %(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        force=True,
+    )
     pipeline = create_pipeline()
-    pipeline.run_once(limit=5)
+    # Debug / manual run: keep processing frames so that
+    # detections and tracks can be observed in logs.
+    pipeline.run_forever()

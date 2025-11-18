@@ -32,7 +32,8 @@ def run_single_pipeline(stream_id: str, rtsp_url: str, base_settings: dict):
     # 각 프로세스마다 독립적인 로거 설정
     logging.basicConfig(
         level=logging.INFO,
-        format=f'[{stream_id}] %(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format=f'[{stream_id}] %(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        force=True,
     )
 
     logger = logging.getLogger(__name__)
@@ -66,7 +67,8 @@ def main():
     # 기본 로깅 설정
     logging.basicConfig(
         level=logging.INFO,
-        format='[MAIN] %(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format='[MAIN] %(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        force=True,
     )
     logger = logging.getLogger(__name__)
 

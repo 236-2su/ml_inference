@@ -54,9 +54,17 @@ class EventDispatcher:
                         response.status_code,
                         response.text,
                     )
+                    print(
+                        f"[DISPATCH] event_id={event_id} client_error status={response.status_code}",
+                        flush=True,
+                    )
                     self.failed_events.append({"event": event, "status": response.status_code})
                     return
                 log.info("Event dispatched (id=%s status=%s)", event_id, response.status_code)
+                print(
+                    f"[DISPATCH] event_id={event_id} status={response.status_code}",
+                    flush=True,
+                )
                 return
             except requests.RequestException as exc:
                 is_last_attempt = attempt == len(self._BACKOFF_SCHEDULE)
@@ -69,6 +77,10 @@ class EventDispatcher:
                 )
                 if is_last_attempt:
                     log.error("Giving up on event %s after retries", event_id)
+                    print(
+                        f"[DISPATCH] event_id={event_id} failed after retries: {exc}",
+                        flush=True,
+                    )
                     self.failed_events.append({"event": event, "error": str(exc)})
                     return
                 time.sleep(backoff)

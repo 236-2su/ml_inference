@@ -52,16 +52,31 @@ class StreamListener:
         """Open the RTSP stream."""
         if self._cap is not None and self._cap.isOpened():
             return
-        log.info("Connecting to stream %s", self.source_url)
-        # Use RTSP over TCP with larger buffer for better stability over long distances
+        # Use RTSP over TCP with larger buffer for better stability over long distances.
+        # Keep retrying instead of failing fast so that multi-stream setups can
+        # tolerate some streams being offline at startup.
         import os
-        os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|buffer_size;10240000|max_delay;500000000|reorder_queue_size;5000"
-        self._cap = cv2.VideoCapture(self.source_url, cv2.CAP_FFMPEG)
-        if self._cap.isOpened():
-            # Increase OpenCV buffer to handle latency
-            self._cap.set(cv2.CAP_PROP_BUFFERSIZE, 10)
-        else:
-            raise RuntimeError(f"Unable to open RTSP stream {self.source_url}")
+        os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = (
+            "rtsp_transport;tcp|buffer_size;10240000|max_delay;500000000|reorder_queue_size;5000"
+        )
+
+        while True:
+            log.info("Connecting to stream %s", self.source_url)
+            cap = cv2.VideoCapture(self.source_url, cv2.CAP_FFMPEG)
+            if cap.isOpened():
+                # Increase OpenCV buffer to handle latency
+                cap.set(cv2.CAP_PROP_BUFFERSIZE, 10)
+                self._cap = cap
+                log.info("Successfully connected to stream %s", self.source_url)
+                return
+
+            log.warning(
+                "Unable to open RTSP stream %s; retrying in %.1fs",
+                self.source_url,
+                self._reconnect_delay,
+            )
+            cap.release()
+            time.sleep(self._reconnect_delay)
 
     def _read_frame(self) -> Optional[np.ndarray]:
         if self._cap is None:
